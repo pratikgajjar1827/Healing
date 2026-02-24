@@ -7,7 +7,6 @@ frontend:
         - test -n "$DATABASE_URL" || (echo "[Amplify] DATABASE_URL is missing. Add it in App settings > Environment variables for this branch." && exit 1)
         - test -n "$NEXTAUTH_SECRET" || (echo "[Amplify] NEXTAUTH_SECRET is missing. Add it in App settings > Environment variables for this branch." && exit 1)
         - npx prisma validate
-        - npx prisma migrate deploy
         - npx prisma generate
     build:
       commands:
