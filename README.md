@@ -45,6 +45,80 @@ Use `prisma studio` to add provider orgs and procedures or create a seed script.
 - The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma generate` before `next build`.
 - In Amplify, make sure `DATABASE_URL`, `NEXTAUTH_SECRET`, and Razorpay secrets are configured in environment variables/SSM for the target branch.
 
+## AWS Amplify deployment playbook (step-by-step)
+
+If your Amplify deployment keeps failing, use this exact sequence.
+
+### 1) Verify the app builds locally first
+```bash
+npm ci --include=dev
+npx prisma generate
+npm run build
+```
+If this fails locally, Amplify will fail too.
+
+### 2) Confirm required environment variables in Amplify
+In **Amplify Console → App settings → Environment variables**, set these for the target branch:
+
+- `DATABASE_URL` (reachable from public internet unless using VPC setup)
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL` (use your Amplify domain, e.g. `https://main.d123abc.amplifyapp.com`)
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_RAZORPAY_KEY_ID`
+
+> Tip: If `NEXTAUTH_URL` is wrong, auth callbacks/sign-in can fail even when build succeeds.
+
+### 3) Check database network access
+Amplify build and runtime must be able to reach your PostgreSQL host.
+
+- If using RDS, allow inbound traffic from the right source/security group.
+- If using managed DB outside AWS, allow Amplify egress IPs or keep DB public with strong credentials/SSL.
+- Ensure SSL requirements in your `DATABASE_URL` match DB policy.
+
+### 4) Use the existing Amplify build spec
+This repo already contains an `amplify.yml` that installs deps, runs Prisma generate, and then builds Next.js.
+
+### 5) Connect repo and deploy
+1. Open Amplify Console.
+2. **New app → Host web app**.
+3. Connect GitHub/GitLab/Bitbucket repo.
+4. Pick branch.
+5. Confirm Amplify detects `amplify.yml`.
+6. Add environment variables.
+7. Click **Save and deploy**.
+
+### 6) If deployment fails, inspect the failing phase
+In build logs, identify whether it fails in:
+- `preBuild` (dependency/prisma issues)
+- `build` (Next.js compile issues)
+- runtime (API/auth/database after successful deploy)
+
+### 7) Fast diagnosis by error pattern
+
+- **`PrismaClientInitializationError` / engine not found**  
+  Usually missing `npx prisma generate` in build or a bad `DATABASE_URL`.
+
+- **`Environment variable not found`**  
+  One or more required secrets are missing in Amplify branch env vars.
+
+- **`next build` fails while pre-rendering**  
+  A route is trying to access DB/secrets at build time. Make route dynamic or guard server code.
+
+- **Auth works locally but not in Amplify**  
+  `NEXTAUTH_URL` mismatch is the most common cause.
+
+### 8) After first successful deploy
+- Re-run deployment once to validate cache stability.
+- Test `/signin`, `/api/auth/*`, and payment endpoints in production.
+- Rotate secrets and move them to SSM Parameter Store for production hygiene.
+
+### 9) Optional hardening
+- Add branch-specific env vars for `main` vs `dev`.
+- Keep Prisma migrations out of build phase unless intentionally running CI migrations.
+- Add health-check endpoint and monitor with CloudWatch/Synthetics.
+
 ## Notes
 - Ensure TLS in production, store secrets in Key Vault, implement audit/consent logs before PHI.
 - Populate ProviderOrg with only **NABH/JCI** entries to align with compliance posture.
