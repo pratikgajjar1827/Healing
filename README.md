@@ -42,7 +42,7 @@ Use `prisma studio` to add provider orgs and procedures or create a seed script.
 
 
 ## AWS Amplify build notes
-- The repo includes an `amplify.yml` that forces a deterministic install (`npm ci --include=dev`) and runs `npx prisma generate` before `next build`.
+- The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma generate` before `next build`.
 - In Amplify, make sure `DATABASE_URL`, `NEXTAUTH_SECRET`, and Razorpay secrets are configured in environment variables/SSM for the target branch.
 
 ## Notes
