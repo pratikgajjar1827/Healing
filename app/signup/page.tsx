@@ -15,7 +15,18 @@ export default function SignUpPage() {
     setMsg(null);
     const res = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) });
     if (res.ok) { setMsg('Account created. You can sign in now.'); setTimeout(()=>router.push('/signin'), 1000); }
-    else { const d = await res.json(); setMsg(d.error || 'Failed'); }
+    else {
+      let error = 'Failed';
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const d = await res.json();
+        error = d.error || error;
+      }
+      if (res.status === 403) {
+        error = 'Sign-up API is blocked on this deployment (HTTP 403). Enable Amplify SSR/Web Compute so /api routes are served.';
+      }
+      setMsg(error);
+    }
   }
 
   return (
