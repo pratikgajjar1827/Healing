@@ -40,6 +40,11 @@ Use `prisma studio` to add provider orgs and procedures or create a seed script.
 - **Sign up**: POST `/api/auth/signup` → stores hashed password (bcrypt). Sign-in via `/signin`.
 - **RBAC**: `Role` enum in Prisma (PATIENT/PROVIDER/ADMIN). Extend middleware rules as needed.
 
+
+## AWS Amplify build notes
+- The repo includes an `amplify.yml` that forces a deterministic install (`npm ci --include=dev`) and runs `npx prisma generate` before `next build`.
+- In Amplify, make sure `DATABASE_URL`, `NEXTAUTH_SECRET`, and Razorpay secrets are configured in environment variables/SSM for the target branch.
+
 ## Notes
 - Ensure TLS in production, store secrets in Key Vault, implement audit/consent logs before PHI.
 - Populate ProviderOrg with only **NABH/JCI** entries to align with compliance posture.
