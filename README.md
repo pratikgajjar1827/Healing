@@ -42,7 +42,7 @@ Use `prisma studio` to add provider orgs and procedures or create a seed script.
 
 
 ## AWS Amplify build notes
-- The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma generate` before `next build`.
+- The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma migrate deploy` and `npx prisma generate` before `next build`.
 - In Amplify, make sure `DATABASE_URL`, `NEXTAUTH_SECRET`, and Razorpay secrets are configured in environment variables/SSM for the target branch.
 
 ## AWS Amplify deployment playbook (step-by-step)
@@ -62,7 +62,7 @@ In **Amplify Console → App settings → Environment variables**, set these for
 
 - `DATABASE_URL` (reachable from public internet unless using VPC setup)
 - `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL` (use your Amplify domain, e.g. `https://main.d123abc.amplifyapp.com`)
+- `NEXTAUTH_URL` (use your Amplify domain root only, e.g. `https://main.d123abc.amplifyapp.com`, no `/signup` path)
 - `RAZORPAY_KEY_ID`
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
@@ -78,7 +78,7 @@ Amplify build and runtime must be able to reach your PostgreSQL host.
 - Ensure SSL requirements in your `DATABASE_URL` match DB policy.
 
 ### 4) Use the existing Amplify build spec
-This repo already contains an `amplify.yml` that installs deps, runs Prisma generate, and then builds Next.js.
+This repo already contains an `amplify.yml` that installs deps, validates required env vars, runs `prisma migrate deploy`, runs `prisma generate`, and then builds Next.js.
 
 ### 5) Connect repo and deploy
 1. Open Amplify Console.
@@ -116,7 +116,7 @@ In build logs, identify whether it fails in:
 ### What was actually breaking deployment in this repo
 From the current codebase, the main hard failure was an invalid Prisma schema (missing opposite relation fields), which prevents `prisma generate` and therefore breaks Next.js build/runtime in Amplify. This has now been fixed in `prisma/schema.prisma`.
 
-Also note: `!Failed to set up process.env.secrets` in Amplify logs usually means SSM parameters are missing under the expected path; this is often a warning unless your app depends on those secrets at build/runtime.
+Also note: `!Failed to set up process.env.secrets` in Amplify logs usually means SSM parameters are missing under the expected path. If you already set values in Amplify **Environment variables**, this warning can be non-blocking; if not, create the missing variables (especially `DATABASE_URL` and `NEXTAUTH_SECRET`) for the branch.
 
 ### 8) After first successful deploy
 - Re-run deployment once to validate cache stability.
