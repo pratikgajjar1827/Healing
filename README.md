@@ -109,6 +109,9 @@ In build logs, identify whether it fails in:
 - **Auth works locally but not in Amplify**  
   `NEXTAUTH_URL` mismatch is the most common cause.
 
+- **Every `/api/*` endpoint returns HTTP 403 in Amplify**  
+  The app is likely deployed as static hosting instead of Next.js SSR/Web Compute. Re-deploy with Amplify's Next.js SSR support so API routes like `/api/auth/signup` are executable.
+
 
 ### What was actually breaking deployment in this repo
 From the current codebase, the main hard failure was an invalid Prisma schema (missing opposite relation fields), which prevents `prisma generate` and therefore breaks Next.js build/runtime in Amplify. This has now been fixed in `prisma/schema.prisma`.
