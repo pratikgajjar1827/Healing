@@ -4,6 +4,7 @@ frontend:
     preBuild:
       commands:
         - if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi
+        - npx prisma validate
         - npx prisma generate
     build:
       commands:

@@ -109,6 +109,12 @@ In build logs, identify whether it fails in:
 - **Auth works locally but not in Amplify**  
   `NEXTAUTH_URL` mismatch is the most common cause.
 
+
+### What was actually breaking deployment in this repo
+From the current codebase, the main hard failure was an invalid Prisma schema (missing opposite relation fields), which prevents `prisma generate` and therefore breaks Next.js build/runtime in Amplify. This has now been fixed in `prisma/schema.prisma`.
+
+Also note: `!Failed to set up process.env.secrets` in Amplify logs usually means SSM parameters are missing under the expected path; this is often a warning unless your app depends on those secrets at build/runtime.
+
 ### 8) After first successful deploy
 - Re-run deployment once to validate cache stability.
 - Test `/signin`, `/api/auth/*`, and payment endpoints in production.
