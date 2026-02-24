@@ -42,7 +42,7 @@ Use `prisma studio` to add provider orgs and procedures or create a seed script.
 
 
 ## AWS Amplify build notes
-- The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma generate` before `next build`.
+- The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma migrate deploy` and `npx prisma generate` before `next build`.
 - In Amplify, make sure `DATABASE_URL`, `NEXTAUTH_SECRET`, and Razorpay secrets are configured in environment variables/SSM for the target branch.
 
 ## AWS Amplify deployment playbook (step-by-step)
@@ -62,7 +62,7 @@ In **Amplify Console → App settings → Environment variables**, set these for
 
 - `DATABASE_URL` (reachable from public internet unless using VPC setup)
 - `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL` (use your Amplify domain, e.g. `https://main.d123abc.amplifyapp.com`)
+- `NEXTAUTH_URL` (use your Amplify domain root only, e.g. `https://main.d123abc.amplifyapp.com`, no `/signup` path)
 - `RAZORPAY_KEY_ID`
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
