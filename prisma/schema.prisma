@@ -1,0 +1,148 @@
+
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  PROVIDER
+  ADMIN
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  hashedPassword String
+  role           Role     @default(PATIENT)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  quotes         Quote[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProviderOrg {
+  id                 String   @id @default(cuid())
+  orgName            String
+  accreditations     String   // CSV of NABH/JCI
+  country            String
+  city               String
+  address            String
+  latitude           Float
+  longitude          Float
+  verified           Boolean  @default(true)
+  languages          String   // CSV
+  specialties        String   // CSV of Cardiac/Oncology/Fertility/Cosmetics
+  rating             Float    @default(0)
+  reviewCount        Int      @default(0)
+  distanceToAirportKm Float?
+  doctors            Doctor[]
+  procedures         Procedure[]
+}
+
+model Doctor {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  specialties String   // CSV
+  experienceY Int
+  languages   String   // CSV
+  rating      Float    @default(0)
+  org         ProviderOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model Procedure {
+  id         String   @id @default(cuid())
+  orgId      String
+  name       String
+  specialty  String
+  basePrice  Float
+  currency   String
+  inclusions String   // CSV
+  exclusions String   // CSV
+  avgLOSDays Int
+  org        ProviderOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  quotes     Quote[]
+}
+
+model Quote {
+  id            String   @id @default(cuid())
+  patientId     String?
+  patientName   String
+  email         String
+  nationality   String
+  procedureId   String
+  preferredDate DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [patientId], references: [id])
+  procedure     Procedure @relation(fields: [procedureId], references: [id])
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  quoteId     String
+  status      String   @default("pending")
+  schedule    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  payments    Payment[]
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  bookingId     String
+  razorpayOrder String
+  razorpayPayId String?
+  amount        Int      // in subunits (e.g., INR paise)
+  currency      String
+  status        String   @default("created") // created|paid|failed
+  createdAt     DateTime @default(now())
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model VisaCase {
+  id          String   @id @default(cuid())
+  bookingId   String
+  destination String
+  nationality String
+  procedure   String
+  status      String   @default("draft")
+  createdAt   DateTime @default(now())
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
