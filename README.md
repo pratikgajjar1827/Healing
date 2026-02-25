@@ -1,50 +1,128 @@
+# HealinginEast – MVP v2 (Auth + DB + Razorpay)
 
-# HealinginEast – MVP v2 (Auth + DB + Razorpay Live)
+This app uses **Next.js 14**, **NextAuth v4 (credentials)**, **Prisma + PostgreSQL**, and Razorpay payment endpoints.
 
-This version adds **NextAuth (credentials)**, **PostgreSQL (Prisma)**, and **Razorpay live order + webhook** stubs. It also includes a simple **logotype & favicon set** under `public/`.
+## What’s included
+- Auth & RBAC with NextAuth credentials provider.
+- PostgreSQL models via Prisma.
+- Razorpay order + webhook APIs.
+- Tailwind UI + brand assets.
 
-## What’s new
-- **Auth & RBAC**: Credentials provider (email/password with bcrypt). Middleware protects `/dashboard`; add `/provider-portal` and `/admin` when ready.
-- **Database**: Prisma schema for users, providers, doctors, procedures, quotes, bookings, payments, visa cases.
-- **Payments**: Razorpay order creation (`/api/payments/razorpay/order`) and **webhook verification** (`/api/payments/razorpay/webhook`).
-- **Brand assets**: `public/logo.svg`, `public/logo.png`, `public/favicon.ico`, Apple/PNG favicons.
-
-## Setup
-1) **Install deps**
+## Local setup
+1) Install dependencies
 ```bash
 npm install
 ```
-2) **Environment**
+
+2) Configure environment
 ```bash
 cp .env.example .env.local
-# set DATABASE_URL, NEXTAUTH_SECRET, RAZORPAY_* and NEXTAUTH_URL
 ```
-3) **Database**
+Set:
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `RAZORPAY_*`
+
+3) Generate Prisma client and apply migrations
 ```bash
 npm run prisma:generate
 npm run prisma:migrate -- --name init
 ```
-4) **Run**
+
+4) Run locally
 ```bash
 npm run dev
 ```
-5) **Seed (optional)**
-Use `prisma studio` to add provider orgs and procedures or create a seed script.
 
-## Razorpay integration
-- **Create order**: Client sends **amount in subunits** (e.g., INR paise) to `/api/payments/razorpay/order`. Server uses **Basic auth** and returns the order payload.
-- **Checkout**: Use `NEXT_PUBLIC_RAZORPAY_KEY_ID` on client with Checkout.js; verify signature server-side after success.
-- **Webhook**: Configure to POST to `/api/payments/razorpay/webhook`. We verify `x-razorpay-signature` with `RAZORPAY_WEBHOOK_SECRET` via HMAC-SHA256.
+---
 
-## Auth
-- **Sign up**: POST `/api/auth/signup` → stores hashed password (bcrypt). Sign-in via `/signin`.
-- **RBAC**: `Role` enum in Prisma (PATIENT/PROVIDER/ADMIN). Extend middleware rules as needed.
+## Deploy to AWS Amplify (SSR)
+This repo includes an `amplify.yml` that installs dependencies (using `npm install`), generates Prisma client, and builds Next.js.
 
-## Notes
-- Ensure TLS in production, store secrets in Key Vault, implement audit/consent logs before PHI.
-- Populate ProviderOrg with only **NABH/JCI** entries to align with compliance posture.
+### 1) Connect repo
+- Amplify Console → **New app** → **Host web app**
+- Connect your Git provider and select this branch.
 
-## Brand assets
-- Colors: brand-500 `#10b981` (teal/green), neutrals from Tailwind slate.
-- Logotype: monogram **He** with a subtle medical **cross** accent.
-- Files: `public/logo.svg`, `public/logo.png`, favicons (`favicon.ico`, 16/32 PNGs, apple-touch-icon.png`).
+### 2) Build settings
+- Keep the repository `amplify.yml` (it uses `npm install`, so lockfile is optional).
+- Framework auto-detect should show **Next.js SSR**.
+
+### 3) Environment variables in Amplify
+Add these in **App settings → Environment variables**:
+- `NEXTAUTH_URL` = your Amplify domain (or custom domain), e.g. `https://main.xxxxx.amplifyapp.com`
+- `NEXTAUTH_SECRET` = strong random secret (32+ chars)
+- `DATABASE_URL` = `postgresql://postgres:<PASSWORD>@database-1.cjo6ma0gqnu3.ap-south-1.rds.amazonaws.com:5432/database-1?schema=public&sslmode=require`
+- `NEXT_PUBLIC_BASE_URL` = same as `NEXTAUTH_URL`
+- `CONTACT_EMAIL`, `NEXT_PUBLIC_WHATSAPP_NUMBER`
+- `NEXT_PUBLIC_RAZORPAY_KEY_ID`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
+
+> Do not commit real credentials. Keep them only in Amplify environment variables / secret manager.
+
+### 4) Database migration strategy
+Because Amplify builds should stay deterministic, run production migrations separately (not in build):
+- From a secure machine/CI with DB access:
+```bash
+npm ci
+npx prisma migrate deploy
+```
+
+### 5) Redeploy
+Trigger a new Amplify deployment after setting env vars.
+
+---
+
+
+### 6) Runtime diagnostics
+After deploy, open:
+- `/api/health/ready`
+- If `DATABASE_URL` appears missing at runtime, verify the variable is set for the deployed branch and trigger a fresh redeploy (Amplify applies env changes on deploy).
+
+It reports whether:
+- auth secret env is present (`NEXTAUTH_SECRET` or `AUTH_SECRET`)
+- `DATABASE_URL` exists
+- database is reachable (`SELECT 1`)
+
+If signup fails, check response JSON from `/api/auth/signup`; it now includes an error `code` such as:
+- `DB_UNREACHABLE_P1001`
+- `DB_AUTH_P1000`
+- `DB_SCHEMA_NOT_MIGRATED`
+
+---
+
+## Required AWS Console manual checks
+
+### RDS / PostgreSQL
+1. **Public accessibility or network reachability**
+   - Ensure the DB endpoint is reachable from Amplify-hosted app runtime.
+2. **Security Group inbound rule**
+   - Allow TCP `5432` from the source that hosts your app runtime.
+   - Prefer least-privilege networking (avoid open `0.0.0.0/0` in production).
+3. **Database user permissions**
+   - User in `DATABASE_URL` must have schema/table read-write access for Prisma.
+4. **SSL**
+   - Keep `sslmode=require` in `DATABASE_URL`.
+
+### Amplify hosting
+1. Confirm branch has all required env vars.
+2. If using a custom domain, update `NEXTAUTH_URL` to that exact HTTPS URL.
+3. After first successful deploy, validate:
+   - signup/signin
+   - protected routes
+   - DB-backed pages
+   - Razorpay order API + webhook endpoint
+
+### Recommended hardening (optional but important)
+- Use **RDS Proxy** for connection pooling and resilience with serverless/SSR traffic.
+- Rotate DB password and Razorpay secrets regularly.
+- Restrict DB access by network controls and monitoring alarms.
+
+---
+
+## Useful commands
+```bash
+npm run lint
+npm run build
+npm run prisma:generate
+npm run prisma:migrate -- --name init
+```

@@ -2,7 +2,6 @@
 'use client';
 import { useMemo, useState } from 'react';
 
-export const metadata = { title: 'Medical Visa' };
 
 const baseChecklist = {
   generic: ['Passport (6+ months validity)', 'Recent photographs', 'Hospital invitation/LOI', 'Proof of funds', 'Travel itinerary', 'Medical records'],
