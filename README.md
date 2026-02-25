@@ -45,6 +45,17 @@ Use `prisma studio` to add provider orgs and procedures or create a seed script.
 - The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma migrate deploy` and `npx prisma generate` before `next build`.
 - In Amplify, make sure `DATABASE_URL`, `NEXTAUTH_SECRET`, and Razorpay secrets are configured in environment variables/SSM for the target branch.
 
+
+## Amplify backend resource for PostgreSQL connectivity
+
+This repo now includes an Amplify backend Lambda resource (`postgresConnectivityCheck`) under `amplify/backend/function/postgresConnectivityCheck` to test runtime connectivity from AWS to your Postgres database.
+
+- It executes `SELECT 1` using `DATABASE_URL`.
+- It supports optional VPC attachment through function parameters (`privateSubnetIds`, `securityGroupIds`) for private RDS deployments.
+- Deploy it with Amplify CLI backend flow (`amplify env add`, `amplify push`) and invoke the Lambda to confirm backend-to-DB connectivity.
+
+See `amplify/README.md` for details.
+
 ## AWS Amplify deployment playbook (step-by-step)
 
 If your Amplify deployment keeps failing, use this exact sequence.
@@ -83,6 +94,12 @@ Quick runtime check after deploy:
 curl -s https://<your-amplify-domain>/api/health/db | jq
 ```
 This endpoint reports whether `DATABASE_URL` is present/parsable and whether Prisma can execute `SELECT 1` from Amplify runtime.
+
+Quick auth env check after deploy:
+```bash
+curl -s https://<your-amplify-domain>/api/health/auth | jq
+```
+This endpoint validates common NextAuth runtime issues (missing `NEXTAUTH_SECRET`, malformed `NEXTAUTH_URL`, or `NEXTAUTH_URL` containing a path/query/hash).
 
 
 ### 3.1) If `/api/health/db` is OK but `/signup` still fails
