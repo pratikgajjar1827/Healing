@@ -1,0 +1,14 @@
+{
+  "function": {
+    "postgresConnectivityCheck": {
+      "service": "Lambda",
+      "providerPlugin": "awscloudformation",
+      "build": true
+    },
+    "postgresSignupBridge": {
+      "service": "Lambda",
+      "providerPlugin": "awscloudformation",
+      "build": true
+    }
+  }
+}
