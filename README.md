@@ -45,6 +45,17 @@ Use `prisma studio` to add provider orgs and procedures or create a seed script.
 - The repo includes an `amplify.yml` that installs dependencies with `npm ci --include=dev` when `package-lock.json` exists (falls back to `npm install --include=dev` otherwise), then runs `npx prisma migrate deploy` and `npx prisma generate` before `next build`.
 - In Amplify, make sure `DATABASE_URL`, `NEXTAUTH_SECRET`, and Razorpay secrets are configured in environment variables/SSM for the target branch.
 
+
+## Amplify backend resource for PostgreSQL connectivity
+
+This repo now includes an Amplify backend Lambda resource (`postgresConnectivityCheck`) under `amplify/backend/function/postgresConnectivityCheck` to test runtime connectivity from AWS to your Postgres database.
+
+- It executes `SELECT 1` using `DATABASE_URL`.
+- It supports optional VPC attachment through function parameters (`privateSubnetIds`, `securityGroupIds`) for private RDS deployments.
+- Deploy it with Amplify CLI backend flow (`amplify env add`, `amplify push`) and invoke the Lambda to confirm backend-to-DB connectivity.
+
+See `amplify/README.md` for details.
+
 ## AWS Amplify deployment playbook (step-by-step)
 
 If your Amplify deployment keeps failing, use this exact sequence.
@@ -67,6 +78,9 @@ In **Amplify Console → App settings → Environment variables**, set these for
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
 - `NEXT_PUBLIC_RAZORPAY_KEY_ID`
+- `SIGNUP_BRIDGE_URL` (optional VPC Lambda Function URL for signup fallback)
+- `SIGNUP_BRIDGE_SECRET` (optional shared secret used by signup bridge)
+- `FORCE_SIGNUP_BRIDGE` (`true` to route all signup writes via bridge)
 
 > Tip: If `NEXTAUTH_URL` is wrong, auth callbacks/sign-in can fail even when build succeeds.
 
@@ -83,6 +97,12 @@ Quick runtime check after deploy:
 curl -s https://<your-amplify-domain>/api/health/db | jq
 ```
 This endpoint reports whether `DATABASE_URL` is present/parsable and whether Prisma can execute `SELECT 1` from Amplify runtime.
+
+Quick auth env check after deploy:
+```bash
+curl -s https://<your-amplify-domain>/api/health/auth | jq
+```
+This endpoint validates common NextAuth runtime issues (missing `NEXTAUTH_SECRET`, malformed `NEXTAUTH_URL`, or `NEXTAUTH_URL` containing a path/query/hash).
 
 
 ### 3.1) If `/api/health/db` is OK but `/signup` still fails
@@ -111,6 +131,23 @@ You can also inspect the signup API response JSON in browser devtools/network; i
 curl -s https://<your-amplify-domain>/api/health/db | jq
 ```
 Then retry `/signup`.
+
+### 3.2) Out-of-the-box fix: VPC signup bridge Lambda (bypasses Next.js runtime DB path)
+If your Amplify runtime cannot reach PostgreSQL from Next.js API routes, this repo includes a fallback bridge:
+
+- `amplify/backend/function/postgresSignupBridge`
+- Exposed by Lambda Function URL
+- Writes users directly to Postgres using `pg`
+
+How to use it:
+1. Deploy backend resources with `amplify push`.
+2. Configure bridge function params: `databaseUrl`, `bridgeSharedSecret`, and optionally VPC subnets/SGs.
+3. Set frontend/runtime env vars:
+   - `SIGNUP_BRIDGE_URL=<lambda_function_url>`
+   - `SIGNUP_BRIDGE_SECRET=<same_secret_as_bridgeSharedSecret>`
+4. Re-deploy. If Prisma runtime connection fails, `/api/auth/signup` auto-falls back to the bridge.
+5. Emergency mode: set `FORCE_SIGNUP_BRIDGE=true` to bypass Prisma runtime path completely for signup.
+
 
 ### 4) Use the existing Amplify build spec
 This repo already contains an `amplify.yml` that installs deps, validates required env vars, runs `prisma migrate deploy`, runs `prisma generate`, and then builds Next.js.
