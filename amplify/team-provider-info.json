@@ -1,0 +1,23 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-medicsaltour-dev-61966-authRole",
+      "UnauthRoleArn": "arn:aws:iam::531475810850:role/amplify-medicsaltour-dev-61966-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::531475810850:role/amplify-medicsaltour-dev-61966-authRole",
+      "Region": "ap-south-1",
+      "DeploymentBucketName": "amplify-medicsaltour-dev-61966-deployment",
+      "UnauthRoleName": "amplify-medicsaltour-dev-61966-unauthRole",
+      "StackName": "amplify-medicsaltour-dev-61966",
+      "StackId": "arn:aws:cloudformation:ap-south-1:531475810850:stack/amplify-medicsaltour-dev-61966/e26b9db0-123b-11f1-9c52-0aabee16384d",
+      "AmplifyAppId": "d2g2jdghezpwx5"
+    },
+    "categories": {
+      "function": {
+        "medicsaltour2cbbb858": {
+          "deploymentBucketName": "amplify-medicsaltour-dev-61966-deployment",
+          "s3Key": "amplify-builds/medicsaltour2cbbb858-37634b44687750573652-build.zip"
+        }
+      }
+    }
+  }
+}

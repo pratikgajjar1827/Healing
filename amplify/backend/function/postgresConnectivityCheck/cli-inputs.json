@@ -1,8 +1,0 @@
-{
-  "resourceName": "postgresConnectivityCheck",
-  "service": "Lambda",
-  "providerPlugin": "awscloudformation",
-  "runtime": "nodejs18.x",
-  "build": true,
-  "category": "function"
-}

@@ -1,14 +1,28 @@
 {
   "function": {
-    "postgresConnectivityCheck": {
-      "service": "Lambda",
+    "medicsaltour2cbbb858": {
+      "build": true,
+      "dependsOn": [],
       "providerPlugin": "awscloudformation",
-      "build": true
+      "service": "Lambda"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_medicsaltour2cbbb858_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "medicsaltour2cbbb858"
+        }
+      ]
     },
-    "postgresSignupBridge": {
-      "service": "Lambda",
-      "providerPlugin": "awscloudformation",
-      "build": true
+    "AMPLIFY_function_medicsaltour2cbbb858_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "medicsaltour2cbbb858"
+        }
+      ]
     }
   }
 }

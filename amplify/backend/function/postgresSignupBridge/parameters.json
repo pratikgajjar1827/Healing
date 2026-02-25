@@ -1,7 +1,0 @@
-{
-  "databaseUrl": "",
-  "bridgeSharedSecret": "",
-  "privateSubnetIds": "",
-  "securityGroupIds": "",
-  "env": "NONE"
-}
