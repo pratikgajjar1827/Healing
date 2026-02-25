@@ -4,6 +4,7 @@ frontend:
     preBuild:
       commands:
         - npm install
+        - printenv | grep -E '^(DATABASE_URL|NEXTAUTH_SECRET|AUTH_SECRET|NEXTAUTH_URL|NEXT_PUBLIC_BASE_URL)=' > .env.production || true
         - npx prisma generate
     build:
       commands:

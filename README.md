@@ -76,6 +76,7 @@ Trigger a new Amplify deployment after setting env vars.
 ### 6) Runtime diagnostics
 After deploy, open:
 - `/api/health/ready`
+- If `DATABASE_URL` appears missing at runtime, verify the variable is set for the deployed branch and trigger a fresh redeploy (Amplify applies env changes on deploy).
 
 It reports whether:
 - auth secret env is present (`NEXTAUTH_SECRET` or `AUTH_SECRET`)
