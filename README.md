@@ -38,14 +38,14 @@ npm run dev
 ---
 
 ## Deploy to AWS Amplify (SSR)
-This repo includes an `amplify.yml` that installs dependencies, generates Prisma client, and builds Next.js.
+This repo includes an `amplify.yml` that installs dependencies (using `npm install`), generates Prisma client, and builds Next.js.
 
 ### 1) Connect repo
 - Amplify Console → **New app** → **Host web app**
 - Connect your Git provider and select this branch.
 
 ### 2) Build settings
-- Keep the repository `amplify.yml`.
+- Keep the repository `amplify.yml` (it uses `npm install`, so lockfile is optional).
 - Framework auto-detect should show **Next.js SSR**.
 
 ### 3) Environment variables in Amplify
