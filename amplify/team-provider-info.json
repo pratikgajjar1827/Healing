@@ -16,6 +16,14 @@
         "medicsaltour2cbbb858": {
           "deploymentBucketName": "amplify-medicsaltour-dev-61966-deployment",
           "s3Key": "amplify-builds/medicsaltour2cbbb858-37634b44687750573652-build.zip"
+        },
+        "postgresConnectivityCheck": {
+          "deploymentBucketName": "amplify-medicsaltour-dev-61966-deployment",
+          "s3Key": ""
+        },
+        "postgresSignupBridge": {
+          "deploymentBucketName": "amplify-medicsaltour-dev-61966-deployment",
+          "s3Key": ""
         }
       }
     }

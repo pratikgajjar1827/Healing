@@ -1,0 +1,134 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Lambda signup bridge for PostgreSQL",
+  "Parameters": {
+    "deploymentBucketName": { "Type": "String" },
+    "env": { "Type": "String" },
+    "s3Key": { "Type": "String" },
+    "databaseUrl": { "Type": "String", "Default": "" },
+    "bridgeSharedSecret": { "Type": "String", "Default": "", "NoEcho": true },
+    "privateSubnetIds": { "Type": "String", "Default": "" },
+    "securityGroupIds": { "Type": "String", "Default": "" }
+  },
+  "Conditions": {
+    "ShouldNotCreateEnvResources": { "Fn::Equals": [{ "Ref": "env" }, "NONE"] },
+    "UseVpc": {
+      "Fn::And": [
+        { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "privateSubnetIds" }, ""] }] },
+        { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "securityGroupIds" }, ""] }] }
+      ]
+    }
+  },
+  "Resources": {
+    "LambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Metadata": { "aws:asset:path": "./src", "aws:asset:property": "Code" },
+      "Properties": {
+        "Code": { "S3Bucket": { "Ref": "deploymentBucketName" }, "S3Key": { "Ref": "s3Key" } },
+        "Handler": "index.handler",
+        "FunctionName": {
+          "Fn::If": [
+            "ShouldNotCreateEnvResources",
+            "postgresSignupBridge",
+            { "Fn::Join": ["", ["postgresSignupBridge", "-", { "Ref": "env" }]] }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "ENV": { "Ref": "env" },
+            "REGION": { "Ref": "AWS::Region" },
+            "DATABASE_URL": { "Ref": "databaseUrl" },
+            "BRIDGE_SHARED_SECRET": { "Ref": "bridgeSharedSecret" }
+          }
+        },
+        "Role": { "Fn::GetAtt": ["LambdaExecutionRole", "Arn"] },
+        "Runtime": "nodejs22.x",
+        "Timeout": 30,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "Fn::If": [
+            "UseVpc",
+            {
+              "SubnetIds": { "Fn::Split": [",", { "Ref": "privateSubnetIds" }] },
+              "SecurityGroupIds": { "Fn::Split": [",", { "Ref": "securityGroupIds" }] }
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
+        }
+      }
+    },
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Fn::If": [
+            "ShouldNotCreateEnvResources",
+            "postgresSignupBridgeLambdaRole",
+            { "Fn::Join": ["", ["postgresSignupBridgeLambdaRole", "-", { "Ref": "env" }]] }
+          ]
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": { "Service": ["lambda.amazonaws.com"] },
+              "Action": ["sts:AssumeRole"]
+            }
+          ]
+        }
+      }
+    },
+    "lambdaexecutionpolicy": {
+      "DependsOn": ["LambdaExecutionRole"],
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "lambda-execution-policy",
+        "Roles": [{ "Ref": "LambdaExecutionRole" }],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["ec2:CreateNetworkInterface", "ec2:DescribeNetworkInterfaces", "ec2:DeleteNetworkInterface"],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "LambdaFunctionUrl": {
+      "Type": "AWS::Lambda::Url",
+      "Properties": {
+        "AuthType": "NONE",
+        "TargetFunctionArn": { "Ref": "LambdaFunction" },
+        "Cors": {
+          "AllowMethods": ["POST", "OPTIONS"],
+          "AllowOrigins": ["*"],
+          "AllowHeaders": ["content-type", "x-bridge-secret"]
+        }
+      }
+    },
+    "FunctionUrlPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": { "Ref": "LambdaFunction" },
+        "Action": "lambda:InvokeFunctionUrl",
+        "Principal": "*",
+        "FunctionUrlAuthType": "NONE"
+      }
+    }
+  },
+  "Outputs": {
+    "Name": { "Value": { "Ref": "LambdaFunction" } },
+    "Arn": { "Value": { "Fn::GetAtt": ["LambdaFunction", "Arn"] } },
+    "Region": { "Value": { "Ref": "AWS::Region" } },
+    "LambdaExecutionRole": { "Value": { "Ref": "LambdaExecutionRole" } },
+    "FunctionUrl": { "Value": { "Fn::GetAtt": ["LambdaFunctionUrl", "FunctionUrl"] } }
+  }
+}

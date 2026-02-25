@@ -1,0 +1,6 @@
+{
+  "CloudWatchRule": "NONE",
+  "databaseUrl": "",
+  "privateSubnetIds": "",
+  "securityGroupIds": ""
+}

@@ -1,0 +1,132 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "PostgreSQL connectivity check lambda",
+  "Parameters": {
+    "CloudWatchRule": { "Type": "String", "Default": "NONE" },
+    "deploymentBucketName": { "Type": "String" },
+    "env": { "Type": "String" },
+    "s3Key": { "Type": "String" },
+    "databaseUrl": { "Type": "String", "Default": "" },
+    "privateSubnetIds": { "Type": "String", "Default": "" },
+    "securityGroupIds": { "Type": "String", "Default": "" }
+  },
+  "Conditions": {
+    "ShouldNotCreateEnvResources": { "Fn::Equals": [{ "Ref": "env" }, "NONE"] },
+    "UseVpc": {
+      "Fn::And": [
+        { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "privateSubnetIds" }, ""] }] },
+        { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "securityGroupIds" }, ""] }] }
+      ]
+    },
+    "UseSchedule": { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "CloudWatchRule" }, "NONE"] }] }
+  },
+  "Resources": {
+    "LambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Metadata": { "aws:asset:path": "./src", "aws:asset:property": "Code" },
+      "Properties": {
+        "Code": { "S3Bucket": { "Ref": "deploymentBucketName" }, "S3Key": { "Ref": "s3Key" } },
+        "Handler": "index.handler",
+        "FunctionName": {
+          "Fn::If": [
+            "ShouldNotCreateEnvResources",
+            "postgresConnectivityCheck",
+            { "Fn::Join": ["", ["postgresConnectivityCheck", "-", { "Ref": "env" }]] }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "ENV": { "Ref": "env" },
+            "REGION": { "Ref": "AWS::Region" },
+            "DATABASE_URL": { "Ref": "databaseUrl" }
+          }
+        },
+        "Role": { "Fn::GetAtt": ["LambdaExecutionRole", "Arn"] },
+        "Runtime": "nodejs22.x",
+        "Timeout": 30,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "Fn::If": [
+            "UseVpc",
+            {
+              "SubnetIds": { "Fn::Split": [",", { "Ref": "privateSubnetIds" }] },
+              "SecurityGroupIds": { "Fn::Split": [",", { "Ref": "securityGroupIds" }] }
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
+        }
+      }
+    },
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Fn::If": [
+            "ShouldNotCreateEnvResources",
+            "postgresConnectivityLambdaRole",
+            { "Fn::Join": ["", ["postgresConnectivityLambdaRole", "-", { "Ref": "env" }]] }
+          ]
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": { "Service": ["lambda.amazonaws.com"] },
+              "Action": ["sts:AssumeRole"]
+            }
+          ]
+        }
+      }
+    },
+    "lambdaexecutionpolicy": {
+      "DependsOn": ["LambdaExecutionRole"],
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "lambda-execution-policy",
+        "Roles": [{ "Ref": "LambdaExecutionRole" }],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["ec2:CreateNetworkInterface", "ec2:DescribeNetworkInterfaces", "ec2:DeleteNetworkInterface"],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "CloudWatchEvent": {
+      "Type": "AWS::Events::Rule",
+      "Condition": "UseSchedule",
+      "Properties": {
+        "Description": "Schedule rule for connectivity check lambda",
+        "ScheduleExpression": { "Ref": "CloudWatchRule" },
+        "State": "ENABLED",
+        "Targets": [{ "Arn": { "Fn::GetAtt": ["LambdaFunction", "Arn"] }, "Id": { "Ref": "LambdaFunction" } }]
+      }
+    },
+    "PermissionForEventsToInvokeLambda": {
+      "Type": "AWS::Lambda::Permission",
+      "Condition": "UseSchedule",
+      "Properties": {
+        "FunctionName": { "Ref": "LambdaFunction" },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": { "Fn::GetAtt": ["CloudWatchEvent", "Arn"] }
+      }
+    }
+  },
+  "Outputs": {
+    "Name": { "Value": { "Ref": "LambdaFunction" } },
+    "Arn": { "Value": { "Fn::GetAtt": ["LambdaFunction", "Arn"] } },
+    "Region": { "Value": { "Ref": "AWS::Region" } },
+    "LambdaExecutionRole": { "Value": { "Ref": "LambdaExecutionRole" } }
+  }
+}
