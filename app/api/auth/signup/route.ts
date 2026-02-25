@@ -125,6 +125,14 @@ export async function POST(req: NextRequest) {
 
     if (prismaError?.name === 'PrismaClientInitializationError') {
       const envSummary = getDatabaseEnvSummary();
+
+      if (email && password) {
+        const bridge = await tryBridgeSignup(name, email, password).catch(() => null);
+        if (bridge?.ok) {
+          return NextResponse.json({ ...bridge.data, fallback: 'SIGNUP_BRIDGE_URL' });
+        }
+      }
+
       const dbPingOk = await canReachDatabaseWithPing();
 
       if (dbPingOk) {
