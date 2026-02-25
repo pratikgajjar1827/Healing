@@ -84,6 +84,12 @@ curl -s https://<your-amplify-domain>/api/health/db | jq
 ```
 This endpoint reports whether `DATABASE_URL` is present/parsable and whether Prisma can execute `SELECT 1` from Amplify runtime.
 
+Quick auth env check after deploy:
+```bash
+curl -s https://<your-amplify-domain>/api/health/auth | jq
+```
+This endpoint validates common NextAuth runtime issues (missing `NEXTAUTH_SECRET`, malformed `NEXTAUTH_URL`, or `NEXTAUTH_URL` containing a path/query/hash).
+
 
 ### 3.1) If `/api/health/db` is OK but `/signup` still fails
 This means base connectivity works, but auth table operations are failing. Check these in order:
