@@ -72,6 +72,23 @@ Trigger a new Amplify deployment after setting env vars.
 
 ---
 
+
+### 6) Runtime diagnostics
+After deploy, open:
+- `/api/health/ready`
+
+It reports whether:
+- auth secret env is present (`NEXTAUTH_SECRET` or `AUTH_SECRET`)
+- `DATABASE_URL` exists
+- database is reachable (`SELECT 1`)
+
+If signup fails, check response JSON from `/api/auth/signup`; it now includes an error `code` such as:
+- `DB_UNREACHABLE_P1001`
+- `DB_AUTH_P1000`
+- `DB_SCHEMA_NOT_MIGRATED`
+
+---
+
 ## Required AWS Console manual checks
 
 ### RDS / PostgreSQL

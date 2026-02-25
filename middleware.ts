@@ -9,7 +9,7 @@ const ADMIN_ONLY = ['/admin'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET });
 
   if (PROTECTED.some(p => pathname.startsWith(p))) {
     if (!token) return NextResponse.redirect(new URL('/signin', req.url));
