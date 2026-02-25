@@ -73,9 +73,16 @@ In **Amplify Console → App settings → Environment variables**, set these for
 ### 3) Check database network access
 Amplify build and runtime must be able to reach your PostgreSQL host.
 
-- If using RDS, allow inbound traffic from the right source/security group.
-- If using managed DB outside AWS, allow Amplify egress IPs or keep DB public with strong credentials/SSL.
-- Ensure SSL requirements in your `DATABASE_URL` match DB policy.
+- If using RDS, set **Public access = Yes** OR attach Amplify runtime to a VPC path that can reach private subnets.
+- Security group for RDS must allow inbound TCP `5432` from the network source used by Amplify runtime.
+- Ensure SSL requirements in your `DATABASE_URL` match DB policy. For RDS, prefer `?sslmode=require`.
+- Ensure your DB parameter/option groups are not enforcing a TLS mode that conflicts with your URL.
+
+Quick runtime check after deploy:
+```bash
+curl -s https://<your-amplify-domain>/api/health/db | jq
+```
+This endpoint reports whether `DATABASE_URL` is present/parsable and whether Prisma can execute `SELECT 1` from Amplify runtime.
 
 ### 4) Use the existing Amplify build spec
 This repo already contains an `amplify.yml` that installs deps, validates required env vars, runs `prisma migrate deploy`, runs `prisma generate`, and then builds Next.js.

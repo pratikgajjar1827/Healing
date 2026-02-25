@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { getDatabaseEnvSummary } from '@/lib/dbDiagnostics';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,8 +26,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (prismaError?.name === 'PrismaClientInitializationError') {
+      const envSummary = getDatabaseEnvSummary();
       return NextResponse.json(
-        { error: 'Database connection failed. Verify DATABASE_URL and DB network access from Amplify runtime.' },
+        {
+          error: 'Database connection failed. Verify DATABASE_URL, SSL mode, and DB network access from Amplify runtime.',
+          hint: 'Call GET /api/health/db to view runtime DB diagnostics.',
+          envSummary,
+        },
         { status: 500 },
       );
     }
