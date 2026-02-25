@@ -9,7 +9,20 @@ type SignupPayload = {
   password?: string;
 };
 
-async function tryBridgeSignup(name: string | null, email: string, password: string) {
+type BridgeSignupResult =
+  | { ok: true; data: Record<string, unknown> }
+  | { ok: false; error: string; details?: unknown }
+  | null;
+
+function isBridgeEnabled() {
+  return Boolean(process.env.SIGNUP_BRIDGE_URL && process.env.SIGNUP_BRIDGE_SECRET);
+}
+
+function shouldForceBridge() {
+  return process.env.FORCE_SIGNUP_BRIDGE === 'true';
+}
+
+async function tryBridgeSignup(name: string | null, email: string, password: string): Promise<BridgeSignupResult> {
   const url = process.env.SIGNUP_BRIDGE_URL;
   const secret = process.env.SIGNUP_BRIDGE_SECRET;
   if (!url || !secret) return null;
@@ -59,6 +72,20 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password) return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
 
+    // Emergency switch for environments where Next.js runtime DB connectivity is unstable.
+    if (shouldForceBridge()) {
+      const bridge = await tryBridgeSignup(name, email, password);
+      if (bridge?.ok) return NextResponse.json({ ...bridge.data, fallback: 'SIGNUP_BRIDGE_URL', forced: true });
+      return NextResponse.json(
+        {
+          error: bridge?.error || 'FORCE_SIGNUP_BRIDGE=true but bridge is not configured.',
+          hint: 'Set SIGNUP_BRIDGE_URL and SIGNUP_BRIDGE_SECRET in Amplify branch env vars.',
+          details: bridge && !bridge.ok ? bridge.details : undefined,
+        },
+        { status: 500 },
+      );
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return NextResponse.json({ error: 'User already exists' }, { status: 400 });
 
@@ -88,6 +115,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Broad bridge fallback for runtime DB failures (not only PrismaClientInitializationError).
+    if (email && password && isBridgeEnabled()) {
+      const bridge = await tryBridgeSignup(name, email, password).catch(() => null);
+      if (bridge?.ok) {
+        return NextResponse.json({ ...bridge.data, fallback: 'SIGNUP_BRIDGE_URL' });
+      }
+    }
+
     if (prismaError?.name === 'PrismaClientInitializationError') {
       const envSummary = getDatabaseEnvSummary();
 
@@ -114,8 +149,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: 'Database connection failed. Verify DATABASE_URL, SSL mode, and DB network access from Amplify runtime.',
-          hint: 'Call GET /api/health/db to view runtime DB diagnostics. Out-of-the-box fallback: configure SIGNUP_BRIDGE_URL + SIGNUP_BRIDGE_SECRET to route signup writes through a VPC Lambda bridge.',
+          hint: isBridgeEnabled()
+            ? 'Bridge is configured but failed. Verify postgresSignupBridge Lambda logs and VPC/SG routing.'
+            : 'Out-of-the-box fallback: configure SIGNUP_BRIDGE_URL + SIGNUP_BRIDGE_SECRET to route signup writes through a VPC Lambda bridge.',
           envSummary,
+          bridgeConfigured: isBridgeEnabled(),
         },
         { status: 500 },
       );
@@ -129,6 +167,7 @@ export async function POST(req: NextRequest) {
           code: prismaError?.code,
           message: prismaError?.message,
         },
+        bridgeConfigured: isBridgeEnabled(),
       },
       { status: 500 },
     );

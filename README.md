@@ -78,6 +78,9 @@ In **Amplify Console → App settings → Environment variables**, set these for
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
 - `NEXT_PUBLIC_RAZORPAY_KEY_ID`
+- `SIGNUP_BRIDGE_URL` (optional VPC Lambda Function URL for signup fallback)
+- `SIGNUP_BRIDGE_SECRET` (optional shared secret used by signup bridge)
+- `FORCE_SIGNUP_BRIDGE` (`true` to route all signup writes via bridge)
 
 > Tip: If `NEXTAUTH_URL` is wrong, auth callbacks/sign-in can fail even when build succeeds.
 
@@ -143,6 +146,7 @@ How to use it:
    - `SIGNUP_BRIDGE_URL=<lambda_function_url>`
    - `SIGNUP_BRIDGE_SECRET=<same_secret_as_bridgeSharedSecret>`
 4. Re-deploy. If Prisma runtime connection fails, `/api/auth/signup` auto-falls back to the bridge.
+5. Emergency mode: set `FORCE_SIGNUP_BRIDGE=true` to bypass Prisma runtime path completely for signup.
 
 
 ### 4) Use the existing Amplify build spec

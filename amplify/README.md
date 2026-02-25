@@ -36,3 +36,6 @@ Set these environment variables in Amplify app branch settings:
 - `SIGNUP_BRIDGE_SECRET=<same value as bridgeSharedSecret>`
 
 When Prisma initialization fails in `/api/auth/signup`, the app will automatically call the bridge URL.
+
+Optional emergency switch:
+- `FORCE_SIGNUP_BRIDGE=true` to always route signup writes through the bridge.
