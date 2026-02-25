@@ -8,7 +8,7 @@ frontend:
         - test -n "$NEXTAUTH_SECRET" || (echo "[Amplify] NEXTAUTH_SECRET is missing. Add it in App settings > Environment variables for this branch." && exit 1)
         - test -n "$NEXTAUTH_URL" || (echo "[Amplify] NEXTAUTH_URL is missing. Add your branch URL root (no path), e.g. https://main.xxxxx.amplifyapp.com" && exit 1)
         - node -e "const u=process.env.DATABASE_URL||''; if(!/^postgres(ql)?:\/\//.test(u)){console.error('[Amplify] DATABASE_URL must start with postgres:// or postgresql://'); process.exit(1)}"
-        - node -e "const u=process.env.NEXTAUTH_URL||''; if(!/^https?:\/\//.test(u)){console.error('[Amplify] NEXTAUTH_URL must start with http:// or https:// and should not include a path'); process.exit(1)}"
+        - node -e "const raw=process.env.NEXTAUTH_URL||''; let parsed; try{parsed=new URL(raw)}catch{console.error('[Amplify] NEXTAUTH_URL must be a valid absolute URL'); process.exit(1)} if(!/^https?:$/.test(parsed.protocol)){console.error('[Amplify] NEXTAUTH_URL must start with http:// or https://'); process.exit(1)} if(parsed.pathname && parsed.pathname!=='/'){console.error('[Amplify] NEXTAUTH_URL must be the site origin only (no path), e.g. https://main.xxxxx.amplifyapp.com'); process.exit(1)} if(parsed.search||parsed.hash){console.error('[Amplify] NEXTAUTH_URL must not include query params or hash fragments'); process.exit(1)}"
         - npx prisma validate
         - npx prisma migrate deploy
         - npx prisma generate
