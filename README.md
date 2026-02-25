@@ -84,6 +84,21 @@ curl -s https://<your-amplify-domain>/api/health/db | jq
 ```
 This endpoint reports whether `DATABASE_URL` is present/parsable and whether Prisma can execute `SELECT 1` from Amplify runtime.
 
+
+### 3.1) If `/api/health/db` is OK but `/signup` still fails
+This means base connectivity works, but auth table operations are failing. Check these in order:
+
+1. **Migrations were actually applied**
+   - Ensure Amplify build logs show `npx prisma migrate deploy` completed successfully.
+2. **Table permissions for DB user**
+   - The user in `DATABASE_URL` must have `SELECT/INSERT/UPDATE/DELETE` on Prisma tables (especially `"User"`).
+3. **Schema mismatch/search_path**
+   - If tables are not in `public`, set the schema explicitly in `DATABASE_URL` (for Postgres, `?schema=...`).
+4. **Connection pool exhaustion in serverless runtime**
+   - For direct RDS connections, prefer conservative pooling in `DATABASE_URL`, e.g. `&connection_limit=1&pool_timeout=20`.
+
+You can also inspect the signup API response JSON in browser devtools/network; it now returns targeted hints for permission/schema/pool issues.
+
 ### 4) Use the existing Amplify build spec
 This repo already contains an `amplify.yml` that installs deps, validates required env vars, runs `prisma migrate deploy`, runs `prisma generate`, and then builds Next.js.
 

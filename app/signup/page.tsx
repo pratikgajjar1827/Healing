@@ -34,6 +34,7 @@ export default function SignUpPage() {
       if (contentType.includes('application/json')) {
         const d = await res.json();
         if (d?.error) error = d.error;
+        if (d?.hint) error = `${error} ${d.hint}`;
       } else {
         const text = (await res.text()).trim();
         if (text) error = `${error}: ${text}`;
