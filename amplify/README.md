@@ -1,22 +1,27 @@
-# Amplify backend resource: PostgreSQL connectivity check
+# Amplify backend resources for PostgreSQL troubleshooting
 
-This repository now includes an Amplify backend **Lambda** resource at:
+This repository includes two Amplify backend Lambda resources:
 
-- `amplify/backend/function/postgresConnectivityCheck`
+1. `postgresConnectivityCheck`
+   - Runs `SELECT 1` against `DATABASE_URL`
+   - Confirms if backend Lambda networking can reach Postgres
 
-It is intended to verify that an Amplify backend runtime can reach your PostgreSQL (RDS) instance.
+2. `postgresSignupBridge` (out-of-the-box fallback)
+   - Accepts signup payload over Lambda Function URL
+   - Writes user row directly to Postgres using `pg`
+   - Designed to bypass Next.js API runtime DB connectivity issues
 
-## What it does
-- Reads `DATABASE_URL` from Lambda environment variables.
-- Attempts to connect to PostgreSQL and runs `SELECT 1`.
-- Returns a JSON payload with `ok: true/false`, latency, and error details.
+## Required parameters
+For `postgresConnectivityCheck`:
+- `databaseUrl`
+- `privateSubnetIds` (optional)
+- `securityGroupIds` (optional)
 
-## Required configuration
-Set the following Amplify function parameters before pushing backend resources:
-
-- `databaseUrl` → your PostgreSQL URL
-- `privateSubnetIds` (optional but recommended for private RDS)
-- `securityGroupIds` (optional but recommended for private RDS)
+For `postgresSignupBridge`:
+- `databaseUrl`
+- `bridgeSharedSecret`
+- `privateSubnetIds` (optional)
+- `securityGroupIds` (optional)
 
 ## Deploy backend resources
 ```bash
@@ -24,4 +29,10 @@ amplify env add   # if not already created
 amplify push
 ```
 
-After deployment, invoke the Lambda in AWS console to validate connectivity.
+## Wire signup fallback in app runtime
+Set these environment variables in Amplify app branch settings:
+
+- `SIGNUP_BRIDGE_URL=<output FunctionUrl from postgresSignupBridge stack>`
+- `SIGNUP_BRIDGE_SECRET=<same value as bridgeSharedSecret>`
+
+When Prisma initialization fails in `/api/auth/signup`, the app will automatically call the bridge URL.

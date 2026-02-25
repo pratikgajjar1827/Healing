@@ -11,6 +11,8 @@ type DbEnvSummary = {
   hasPoolTimeoutParam?: boolean;
   hasConnectTimeoutParam?: boolean;
   isAmplifyRuntime?: boolean;
+  isPrismaAccelerateUrl?: boolean;
+  directDatabaseUrlPresent?: boolean;
 };
 
 export function getDatabaseEnvSummary(): DbEnvSummary {
@@ -18,6 +20,8 @@ export function getDatabaseEnvSummary(): DbEnvSummary {
   if (!value) {
     return { isPresent: false };
   }
+
+  const isPrismaAccelerateUrl = value.startsWith('prisma://');
 
   try {
     const parsed = new URL(value);
@@ -32,9 +36,14 @@ export function getDatabaseEnvSummary(): DbEnvSummary {
       hasPoolTimeoutParam: parsed.searchParams.has('pool_timeout'),
       hasConnectTimeoutParam: parsed.searchParams.has('connect_timeout'),
       isAmplifyRuntime: Boolean(process.env.AWS_BRANCH || process.env.AWS_APP_ID || process.env.AWS_EXECUTION_ENV),
+      isPrismaAccelerateUrl,
+      directDatabaseUrlPresent: Boolean(process.env.DIRECT_DATABASE_URL),
     };
   } catch {
-    return { isPresent: true };
+    return {
+      isPresent: true,
+      isPrismaAccelerateUrl,
+      directDatabaseUrlPresent: Boolean(process.env.DIRECT_DATABASE_URL),
+    };
   }
 }
-

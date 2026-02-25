@@ -129,6 +129,22 @@ curl -s https://<your-amplify-domain>/api/health/db | jq
 ```
 Then retry `/signup`.
 
+### 3.2) Out-of-the-box fix: VPC signup bridge Lambda (bypasses Next.js runtime DB path)
+If your Amplify runtime cannot reach PostgreSQL from Next.js API routes, this repo includes a fallback bridge:
+
+- `amplify/backend/function/postgresSignupBridge`
+- Exposed by Lambda Function URL
+- Writes users directly to Postgres using `pg`
+
+How to use it:
+1. Deploy backend resources with `amplify push`.
+2. Configure bridge function params: `databaseUrl`, `bridgeSharedSecret`, and optionally VPC subnets/SGs.
+3. Set frontend/runtime env vars:
+   - `SIGNUP_BRIDGE_URL=<lambda_function_url>`
+   - `SIGNUP_BRIDGE_SECRET=<same_secret_as_bridgeSharedSecret>`
+4. Re-deploy. If Prisma runtime connection fails, `/api/auth/signup` auto-falls back to the bridge.
+
+
 ### 4) Use the existing Amplify build spec
 This repo already contains an `amplify.yml` that installs deps, validates required env vars, runs `prisma migrate deploy`, runs `prisma generate`, and then builds Next.js.
 

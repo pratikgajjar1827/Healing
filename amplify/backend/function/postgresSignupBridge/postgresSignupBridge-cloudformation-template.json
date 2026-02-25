@@ -1,0 +1,88 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Amplify backend Lambda bridge for signup writes to PostgreSQL",
+  "Parameters": {
+    "env": { "Type": "String", "Default": "NONE" },
+    "databaseUrl": { "Type": "String", "Default": "" },
+    "bridgeSharedSecret": { "Type": "String", "Default": "" },
+    "privateSubnetIds": { "Type": "String", "Default": "" },
+    "securityGroupIds": { "Type": "String", "Default": "" },
+    "DeploymentBucketName": { "Type": "String" },
+    "S3DeploymentRootKey": { "Type": "String" }
+  },
+  "Conditions": {
+    "HasEnv": { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "env" }, "NONE"] }] },
+    "HasVpcConfig": {
+      "Fn::And": [
+        { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "privateSubnetIds" }, ""] }] },
+        { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "securityGroupIds" }, ""] }] }
+      ]
+    }
+  },
+  "Resources": {
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{ "Effect": "Allow", "Principal": { "Service": ["lambda.amazonaws.com"] }, "Action": ["sts:AssumeRole"] }]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+        ]
+      }
+    },
+    "LambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::If": ["HasEnv", { "Fn::Join": ["", ["amplify-", { "Ref": "env" }, "-postgresSignupBridge"]] }, "amplify-postgresSignupBridge"]
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs18.x",
+        "Timeout": 25,
+        "MemorySize": 256,
+        "Role": { "Fn::GetAtt": ["LambdaExecutionRole", "Arn"] },
+        "Code": { "S3Bucket": { "Ref": "DeploymentBucketName" }, "S3Key": { "Ref": "S3DeploymentRootKey" } },
+        "Environment": {
+          "Variables": {
+            "DATABASE_URL": { "Ref": "databaseUrl" },
+            "BRIDGE_SHARED_SECRET": { "Ref": "bridgeSharedSecret" }
+          }
+        },
+        "VpcConfig": {
+          "Fn::If": [
+            "HasVpcConfig",
+            {
+              "SubnetIds": { "Fn::Split": [",", { "Ref": "privateSubnetIds" }] },
+              "SecurityGroupIds": { "Fn::Split": [",", { "Ref": "securityGroupIds" }] }
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
+        }
+      }
+    },
+    "FunctionUrl": {
+      "Type": "AWS::Lambda::Url",
+      "Properties": {
+        "AuthType": "NONE",
+        "TargetFunctionArn": { "Fn::GetAtt": ["LambdaFunction", "Arn"] }
+      }
+    },
+    "FunctionUrlPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunctionUrl",
+        "FunctionName": { "Ref": "LambdaFunction" },
+        "FunctionUrlAuthType": "NONE",
+        "Principal": "*"
+      }
+    }
+  },
+  "Outputs": {
+    "FunctionUrl": { "Value": { "Fn::GetAtt": ["FunctionUrl", "FunctionUrl"] } },
+    "Name": { "Value": { "Ref": "LambdaFunction" } },
+    "Arn": { "Value": { "Fn::GetAtt": ["LambdaFunction", "Arn"] } }
+  }
+}

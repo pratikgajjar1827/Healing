@@ -9,9 +9,16 @@ frontend:
         - test -n "$NEXTAUTH_URL" || (echo "[Amplify] NEXTAUTH_URL is missing. Add your branch URL root (no path), e.g. https://main.xxxxx.amplifyapp.com" && exit 1)
         - node -e "const u=process.env.DATABASE_URL||''; if(!/^postgres(ql)?:\/\//.test(u)){console.error('[Amplify] DATABASE_URL must start with postgres:// or postgresql://'); process.exit(1)}"
         - node -e "const raw=process.env.NEXTAUTH_URL||''; let parsed; try{parsed=new URL(raw)}catch{console.error('[Amplify] NEXTAUTH_URL must be a valid absolute URL'); process.exit(1)} if(!/^https?:$/.test(parsed.protocol)){console.error('[Amplify] NEXTAUTH_URL must start with http:// or https://'); process.exit(1)} if(parsed.pathname && parsed.pathname!=='/'){console.error('[Amplify] NEXTAUTH_URL must be the site origin only (no path), e.g. https://main.xxxxx.amplifyapp.com'); process.exit(1)} if(parsed.search||parsed.hash){console.error('[Amplify] NEXTAUTH_URL must not include query params or hash fragments'); process.exit(1)}"
-        - npx prisma validate
-        - npx prisma migrate deploy
-        - npx prisma generate
+        - |
+          if [ -n "$DIRECT_DATABASE_URL" ]; then
+            export PRISMA_MIGRATE_DATABASE_URL="$DIRECT_DATABASE_URL"
+            echo "[Amplify] DIRECT_DATABASE_URL detected; Prisma migrate/validate/generate will use direct Postgres URL."
+          else
+            export PRISMA_MIGRATE_DATABASE_URL="$DATABASE_URL"
+          fi
+        - DATABASE_URL="$PRISMA_MIGRATE_DATABASE_URL" npx prisma validate
+        - DATABASE_URL="$PRISMA_MIGRATE_DATABASE_URL" npx prisma migrate deploy
+        - DATABASE_URL="$PRISMA_MIGRATE_DATABASE_URL" npx prisma generate
     build:
       commands:
         - npm run build
