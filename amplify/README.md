@@ -39,3 +39,20 @@ When Prisma initialization fails in `/api/auth/signup`, the app will automatical
 
 Optional emergency switch:
 - `FORCE_SIGNUP_BRIDGE=true` to always route signup writes through the bridge.
+
+## If `amplify push` fails with `Found "{" where a key name was expected`
+This is a JSON parsing failure in local Amplify files.
+
+1. Run:
+```bash
+npm run validate:amplify
+```
+2. If validation passes but push still fails on Windows, re-checkout backend files to remove local encoding/merge artifacts:
+```bash
+git checkout -- amplify/backend
+```
+3. Re-run:
+```bash
+amplify push --verbose
+```
+
