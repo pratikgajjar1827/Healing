@@ -1,10 +1,11 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { Route } from 'next';
 import { cn } from '@/lib/utils';
 import AuthButtons from '@/components/AuthButtons';
 
-const links = [
+const links: Array<{ href: Route; label: string }> = [
   { href: '/', label: 'Home' },
   { href: '/treatments', label: 'Treatments' },
   { href: '/destinations', label: 'Destinations' },
