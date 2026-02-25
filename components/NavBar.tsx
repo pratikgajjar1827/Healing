@@ -23,7 +23,7 @@ export default function NavBar() {
         <Link href="/" className="font-extrabold text-xl text-brand-700">HealinginEast</Link>
         <nav className="hidden md:flex gap-6 text-sm">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className={cn('hover:text-brand-700', pathname === l.href && 'text-brand-700 font-medium')}>
+            <Link key={l.href} href={l.href} prefetch={false} className={cn('hover:text-brand-700', pathname === l.href && 'text-brand-700 font-medium')}>
               {l.label}
             </Link>
           ))}
