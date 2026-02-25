@@ -5,6 +5,18 @@
       "dependsOn": [],
       "providerPlugin": "awscloudformation",
       "service": "Lambda"
+    },
+    "postgresConnectivityCheck": {
+      "build": true,
+      "dependsOn": [],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "postgresSignupBridge": {
+      "build": true,
+      "dependsOn": [],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
     }
   },
   "parameters": {
@@ -21,6 +33,38 @@
         {
           "category": "function",
           "resourceName": "medicsaltour2cbbb858"
+        }
+      ]
+    },
+    "AMPLIFY_function_postgresConnectivityCheck_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "postgresConnectivityCheck"
+        }
+      ]
+    },
+    "AMPLIFY_function_postgresConnectivityCheck_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "postgresConnectivityCheck"
+        }
+      ]
+    },
+    "AMPLIFY_function_postgresSignupBridge_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "postgresSignupBridge"
+        }
+      ]
+    },
+    "AMPLIFY_function_postgresSignupBridge_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "postgresSignupBridge"
         }
       ]
     }

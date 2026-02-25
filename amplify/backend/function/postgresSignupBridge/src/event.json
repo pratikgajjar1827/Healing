@@ -1,0 +1,6 @@
+{
+  "headers": {
+    "x-bridge-secret": "replace-me"
+  },
+  "body": "{\"name\":\"Demo User\",\"email\":\"demo@example.com\",\"password\":\"ChangeMe123!\"}"
+}
