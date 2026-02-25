@@ -4,6 +4,11 @@ import { getDatabaseEnvSummary } from '@/lib/dbDiagnostics';
 
 export async function GET() {
   const env = getDatabaseEnvSummary();
+  const recommendations: string[] = [];
+
+  if (env.isAmplifyRuntime && !env.hasConnectionLimitParam) recommendations.push('Add connection_limit=1 to DATABASE_URL for Amplify runtime.');
+  if (env.isAmplifyRuntime && !env.hasPoolTimeoutParam) recommendations.push('Add pool_timeout=20 to DATABASE_URL for Amplify runtime.');
+  if (env.isAmplifyRuntime && !env.hasConnectTimeoutParam) recommendations.push('Add connect_timeout=15 to DATABASE_URL for Amplify runtime.');
 
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -12,6 +17,7 @@ export async function GET() {
       ok: true,
       message: 'Database connection is healthy.',
       env,
+      recommendations,
     });
   } catch (error: unknown) {
     const prismaError = error as { name?: string; message?: string } | null;
@@ -24,6 +30,7 @@ export async function GET() {
           name: prismaError?.name,
           message: prismaError?.message,
           env,
+          recommendations,
         },
       },
       { status: 500 },

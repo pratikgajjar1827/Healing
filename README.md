@@ -94,10 +94,23 @@ This means base connectivity works, but auth table operations are failing. Check
    - The user in `DATABASE_URL` must have `SELECT/INSERT/UPDATE/DELETE` on Prisma tables (especially `"User"`).
 3. **Schema mismatch/search_path**
    - If tables are not in `public`, set the schema explicitly in `DATABASE_URL` (for Postgres, `?schema=...`).
-4. **Connection pool exhaustion in serverless runtime**
-   - For direct RDS connections, prefer conservative pooling in `DATABASE_URL`, e.g. `&connection_limit=1&pool_timeout=20`.
+4. **Connection pool exhaustion in serverless runtime (most common with Amplify + direct RDS)**
+   - For direct RDS connections, use: `&connection_limit=1&pool_timeout=20&connect_timeout=15`.
+   - This repo now auto-applies these params in Amplify runtime when missing, but setting them explicitly in `DATABASE_URL` is still recommended.
+5. **Prefer RDS Proxy for production**
+   - Point `DATABASE_URL` host to the **RDS Proxy endpoint** (same DB/user/SSL params). This stabilizes Lambda/SSR connection bursts.
 
 You can also inspect the signup API response JSON in browser devtools/network; it now returns targeted hints for permission/schema/pool issues.
+
+**Fast fix for your current symptom (`/api/health/db` works but signup fails):**
+1. Update Amplify `DATABASE_URL` to include `sslmode=require&connection_limit=1&pool_timeout=20&connect_timeout=15`.
+2. Re-deploy Amplify.
+3. If still failing, switch host to **RDS Proxy endpoint** and redeploy.
+4. Confirm with:
+```bash
+curl -s https://<your-amplify-domain>/api/health/db | jq
+```
+Then retry `/signup`.
 
 ### 4) Use the existing Amplify build spec
 This repo already contains an `amplify.yml` that installs deps, validates required env vars, runs `prisma migrate deploy`, runs `prisma generate`, and then builds Next.js.
