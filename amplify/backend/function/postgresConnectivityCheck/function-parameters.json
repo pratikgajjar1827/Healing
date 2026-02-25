@@ -1,0 +1,11 @@
+{
+  "runtime": "nodejs18.x",
+  "lambdaLayers": [],
+  "permissions": {},
+  "environmentVariableList": [
+    {
+      "cloudFormationParameterName": "databaseUrl",
+      "environmentVariableName": "DATABASE_URL"
+    }
+  ]
+}

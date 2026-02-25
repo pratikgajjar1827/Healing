@@ -1,0 +1,9 @@
+{
+  "function": {
+    "postgresConnectivityCheck": {
+      "service": "Lambda",
+      "providerPlugin": "awscloudformation",
+      "build": true
+    }
+  }
+}
